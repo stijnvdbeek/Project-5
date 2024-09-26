@@ -10,9 +10,12 @@ df['eindtijd datum'] = pd.to_datetime(df['eindtijd datum'])
 
 # Assign a color to each unique activity
 activities = df['activiteit'].unique()
-colors = plt.cm.get_cmap('tab20', len(activities))
 
-color_dict = {activity: colors(i) for i, activity in enumerate(activities)}
+# Use the updated method to get the colormap
+cmap = plt.colormaps.get_cmap('Set2')
+colors = [cmap(i / len(activities)) for i in range(len(activities))]
+
+color_dict = {activity: colors[i] for i, activity in enumerate(activities)}
 
 # Create the Gantt chart
 fig, ax = plt.subplots(figsize=(10, 6))

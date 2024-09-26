@@ -46,4 +46,4 @@ ax.set_ylabel('Omloop nummer')
 ax.set_title('Omloopplanning Gantt Chart')
 
 plt.tight_layout()
-plt.show()
+plt.savefig('Omloopplanning_Gantt.png')

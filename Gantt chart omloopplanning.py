@@ -14,7 +14,7 @@ df['actieviteitBuslijn'] = df['activiteit'] + ' ' + df['buslijn'].fillna(' ').as
 activities = df['actieviteitBuslijn'].unique()
 
 # Use the updated method to get the colormap
-cmap = plt.colormaps.get_cmap('Set2')
+cmap = plt.colormaps.get_cmap('turbo')
 colors = [cmap(i / len(activities)) for i in range(len(activities))]
 
 color_dict = {activity: colors[i] for i, activity in enumerate(activities)}

@@ -10,7 +10,8 @@ df['starttijd datum'] = pd.to_datetime(df['starttijd datum'])
 df['eindtijd datum'] = pd.to_datetime(df['eindtijd datum'])
 
 # Assign a color to each unique activity
-activities = df['activiteit'].unique()
+df['actieviteitBuslijn'] = df['activiteit'] + ' ' + df['buslijn'].fillna(' ').astype(str)
+activities = df['actieviteitBuslijn'].unique()
 
 # Use the updated method to get the colormap
 cmap = plt.colormaps.get_cmap('Set2')
@@ -25,7 +26,7 @@ for idx, row in df.iterrows():
     ax.barh(row['omloop nummer'], 
             row['eindtijd datum'] - row['starttijd datum'], 
             left=row['starttijd datum'], 
-            color=color_dict[row['activiteit']],
+            color=color_dict[row['actieviteitBuslijn']],
             edgecolor='black')
 
 # Format x-axis for time

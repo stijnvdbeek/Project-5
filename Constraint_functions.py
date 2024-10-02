@@ -8,11 +8,11 @@ import warnings
 
 # Functie om data in te laden
 
-def load_data():
+def load_data(path_omloopplanning,path_dienstregeling):
 
     # Zet de Excel bestanden in DataFrames
-    df_omloopplanning = pd.read_excel('omloopplanning.xlsx', engine='openpyxl')
-    df_dienstregeling = pd.read_excel('Connexxion data - 2024-2025.xlsx', engine='openpyxl')
+    df_omloopplanning = pd.read_excel(path_omloopplanning, engine='openpyxl')
+    df_dienstregeling = pd.read_excel(path_dienstregeling, engine='openpyxl')
     return df_omloopplanning, df_dienstregeling
 
 # Waarschuwingen negeren
@@ -96,7 +96,7 @@ def Results_check_omloopplanning(df_omloopplanning, df_dienstregeling):
 
 # Functie voor het controleren van de energie niveau's:
 
-def Check_accu(df_omloopplanning):
+def Check_accu(df_omloopplanning,batterijslijtage):
 
     # Toevoegen gebruikte kW kolom:
 
@@ -119,7 +119,7 @@ def Check_accu(df_omloopplanning):
     max_batt_capa = 300 # kW
     SOC_start = 0.9 # factor
     SOC_min = 0.1 # factor
-    batterijslijtage = 0.85 # Afhankelijk van de leeftijd van de bus is dat zo’n 85%-95% van de maximale capaciteit 
+    #batterijslijtage = 0.85 # Afhankelijk van de leeftijd van de bus is dat zo’n 85%-95% van de maximale capaciteit 
     SOH =  max_batt_capa * batterijslijtage # De SOH is de maximale capaciteit van een specifieke bus
 
     SOC_ochtend = SOH * SOC_start # De SOC geeft aan hoeveel procent de bus nog geladen is. 100% is daarbij gelijk aan de SOH van de bus.
@@ -193,3 +193,51 @@ def Check_oplaad_tijd(df_omloopplanning):
         niet_lang_genoeg_opgeladen_df = opladen_df[opladen_df['lang_genoeg_opgeladen'] == False]
         
     return error, opladen_df, niet_lang_genoeg_opgeladen_df
+
+# Functie om een gantt chart te maken van de omloopplanning
+
+def Gantt_chart(df):
+
+    # Convert starttijd and eindtijd to datetime for proper plotting
+    df['starttijd datum'] = pd.to_datetime(df['starttijd datum'])
+    df['eindtijd datum'] = pd.to_datetime(df['eindtijd datum'])
+
+    # Assign a color to each unique activity
+    df['actieviteitBuslijn'] = df['activiteit'] + ' ' + df['buslijn'].fillna(' ').astype(str)
+    activities = df['actieviteitBuslijn'].unique()
+
+    # Use the updated method to get the colormap
+    cmap = plt.colormaps.get_cmap('turbo')
+    colors = [cmap(i / len(activities)) for i in range(len(activities))]
+
+    color_dict = {activity: colors[i] for i, activity in enumerate(activities)}
+
+    # Create the Gantt chart
+    fig, ax = plt.subplots(figsize=(18, 9))
+
+    for idx, row in df.iterrows():
+        ax.barh(row['omloop nummer'], 
+                row['eindtijd datum'] - row['starttijd datum'], 
+                left=row['starttijd datum'], 
+                color=color_dict[row['actieviteitBuslijn']],
+                edgecolor='black')
+
+    # Format x-axis for time
+    ax.xaxis_date()
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+
+
+    # Format Y-axis for jumps of one
+    ax.set_yticks(np.arange(0, 21, 1))
+
+    # Create legend
+    legend_elements = [Patch(facecolor=color_dict[activity], label=activity) for activity in activities]
+    ax.legend(handles=legend_elements, title="Activiteit", bbox_to_anchor=(1.05, 1), loc='upper left')
+
+    # Set labels and title
+    ax.set_xlabel('Tijd')
+    ax.set_ylabel('Omloop nummer')
+    ax.set_title('Omloopplanning Gantt Chart')
+
+    plt.tight_layout()
+    plt.savefig('Omloopplanning_Gantt.png')

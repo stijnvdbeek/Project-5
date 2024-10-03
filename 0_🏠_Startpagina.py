@@ -1,3 +1,5 @@
+# python -m streamlit run .\0_??_Startpagina.py
+
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.patches import Patch
@@ -7,6 +9,7 @@ from IPython.display import display
 import warnings
 import streamlit as st
 import os
+from datetime import time
 
 # Functies van Constraints importeren
 from Constraint_functions import *
@@ -104,6 +107,10 @@ if bereken:
         st.write('Alle bussen hebben minimaal 15 minuten aan de oplader gestaan: ✅')
     
     Gantt_chart(df_omloopplanning)
+
+appointment = st.slider(
+    "Schedule your appointment:", value=(time(11, 30), time(12, 45))
+)
     
     
 

@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from IPython.display import display
 import warnings
+import os
 
 # Functie om data in te laden
 
@@ -79,14 +80,14 @@ def Results_check_omloopplanning(df_omloopplanning, df_dienstregeling):
     # Deel 1: Resultaten van omloopplanning controleren
     filtered_df = df_omloopplanning[df_omloopplanning['activiteit'] == 'dienst rit']
     false_count = filtered_df['correct'].value_counts().get(False, 0)
-    omloop_txt = "Aantal onjuiste dienstritten in omloopplanning: " + str(false_count)
+    omloop_txt = "Amount not allowed jobs: " + str(false_count)
     if false_count > 0:
         false_rows = filtered_df[filtered_df['correct'] == False]
         omloop_flase_df =false_rows[['startlocatie', 'eindlocatie', 'starttijd', 'eindtijd', 'buslijn', 'correct']]
 
     # Deel 2: Resultaten van dienstregeling controleren
     not_found_count = df_dienstregeling['found_in_omloop'].value_counts().get(False, 0)
-    dienst_txt = "Aantal dienstritten in dienstregeling die niet in omloopplanning zijn gevonden: " + str(not_found_count)
+    dienst_txt = "Amount of missing jobs(according to dienst): " + str(not_found_count)
     if not_found_count > 0:
         not_found_rows = df_dienstregeling[df_dienstregeling['found_in_omloop'] == False]
         dienst_false_df = not_found_rows[['startlocatie', 'eindlocatie', 'vertrektijd', 'buslijn']]
@@ -239,5 +240,9 @@ def Gantt_chart(df):
     ax.set_ylabel('Omloop nummer')
     ax.set_title('Omloopplanning Gantt Chart')
 
+    if os.path.exists("Omloopplanning_Gantt.png"):
+        os.remove("Omloopplanning_Gantt.png")
+
     plt.tight_layout()
     plt.savefig('Omloopplanning_Gantt.png')
+    return ax

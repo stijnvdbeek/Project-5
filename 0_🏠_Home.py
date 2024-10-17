@@ -58,7 +58,7 @@ Path_dienstregeling = st.file_uploader('Upload dienstregeling: ', type= 'xlsx', 
 
 batterijslijtage = st.select_slider("Choose state of health value (for all busses):", options=[85, 90, 95])
 
-verbruik_marge = st.select_slider("Choose a marge for energy use (average KWH = 1.2)", lines)
+#verbruik_marge = st.select_slider("Choose a marge for energy use (average KWH = 1.2)", lines)
 
 bereken = st.button('Calculate!')
 
@@ -80,13 +80,13 @@ if bereken:
         st.write(omloop_txt, ' ⛔')
         st.write(omloop_flase_df)
     else:
-        st.markdown('**The omloopplanning fills all jobs:** ✅')
+        st.markdown('**The Circulation Plan fills all jobs:** ✅')
     
     if dienst_false_df.shape[0] != 0:
         st.write(dienst_txt, ' ⛔')
         st.write(dienst_false_df)
     else:
-        st.markdown('**No missing jobs(according to dienstregeling):** ✅')
+        st.markdown('**No missing jobs(according to TimeTable):** ✅')
 
     # Accu percentage controleren
 
@@ -95,7 +95,7 @@ if bereken:
         st.write(f'Jobs with low battery: {filtered_df.shape[0]} ⛔ ')
         st.write(filtered_df)
     else:
-        st.markdown("**No jobs with to low battery:** ✅")
+        st.markdown("**No jobs with too low battery:** ✅")
 
     # Oplaat tijd controleren:
 

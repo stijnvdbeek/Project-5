@@ -58,7 +58,7 @@ Path_dienstregeling = st.file_uploader('Upload dienstregeling: ', type= 'xlsx', 
 
 batterijslijtage = st.select_slider("Choose state of health value (for all busses):", options=[85, 90, 95])
 
-verbruik_marge = st.select_slider("Choose a marge for energy use (average KWH = 1.2)", lines)
+#verbruik_marge = st.select_slider("Choose a marge for energy use (average KWH = 1.2)")
 
 bereken = st.button('Calculate!')
 

@@ -97,88 +97,171 @@ def Results_check_omloopplanning(df_omloopplanning, df_dienstregeling):
 
 # Functie voor het controleren van de energie niveau's:
 
-def Check_accu(df_omloopplanning,batterijslijtage):
+def Check_accu(path_omloopplanning, batterijslijtage : int, energieverbruik : int):
 
-    # Toevoegen gebruikte kW kolom:
+    # Inladen van data
+    df_omloopplanning = pd.read_excel(path_omloopplanning, engine='openpyxl')
 
-    # Nieuwe kolom 'duur' toevoegen die het verschil tussen eindtijd en starttijd aangeeft
-    df_omloopplanning['duur'] = df_omloopplanning['eindtijd'] - df_omloopplanning['starttijd']
+    # Converteer tijd kolommen naar datetime objecten voor makkelijke bewerking
+    df_omloopplanning['starttijd'] = pd.to_datetime(df_omloopplanning['starttijd datum'])
+    df_omloopplanning['eindtijd'] = pd.to_datetime(df_omloopplanning['eindtijd datum'])
+    
+    # Converteer tijd kolommen naar datetime objecten voor makkelijke bewerking
+    df_omloopplanning['starttijd'] = pd.to_datetime(df_omloopplanning['starttijd datum'])
+    df_omloopplanning['eindtijd'] = pd.to_datetime(df_omloopplanning['eindtijd datum'])
+    
+    # Verwijder de specifieke kolommen
+    df_omloopplanningv2 = df_omloopplanning.copy()
+    df_omloopplanningv2.drop(columns=['starttijd datum', 'eindtijd datum'], inplace=True)
 
-    # De kolom 'duur' converteren naar minuten
-    df_omloopplanning['duur_minuten'] = df_omloopplanning['duur'].dt.total_seconds() / 60
+    # Zet de kolom 'starttijd' om naar datetime-formaat
+    df_omloopplanningv2['starttijd'] = pd.to_datetime(df_omloopplanningv2['starttijd'])
+    df_omloop = df_omloopplanningv2.copy()
 
-    # De kolom 'duur_minuten' converteren naar uren
-    df_omloopplanning['duur_uren'] = df_omloopplanning['duur_minuten'] / 60
+    # Voeg de kolommen samen en maak de nieuwe kolom 'code'
+    df_omloop['code_omloop'] = df_omloop['startlocatie'].astype(str) + '_' + \
+                                df_omloop['eindlocatie'].astype(str) + '_' + \
+                                df_omloop['buslijn'].astype(str)
+    
+    # Afstands matrix inladen
+    df_afstandsmatrix = pd.read_excel('Connexxion data - 2024-2025.xlsx', engine='openpyxl', sheet_name='Afstandsmatrix')
 
-    # energieverbruik kolom: de eenheid is kWh --> dus NIET kWh per gereden kilometer
+    # Voeg de kolommen samen en maak de nieuwe kolom 'code'
+    df_afstandsmatrix['code_afstand'] = df_afstandsmatrix['startlocatie'].astype(str) + '_' + \
+                                df_afstandsmatrix['eindlocatie'].astype(str) + '_' + \
+                                df_afstandsmatrix['buslijn'].astype(str)
 
-    # Totale gebruikte kilowatturen (kWh) berekenen en opslaan in een nieuwe kolom 'totale_kWh'
-    df_omloopplanning['gebruikt_kW'] = df_omloopplanning['duur_uren'] * df_omloopplanning['energieverbruik']
+    # Merge df_omloop with the relevant columns from df_afstandsmatrix
+    df_omloop_merged = pd.merge(
+        df_omloop,
+        df_afstandsmatrix[['code_afstand', 'afstand in meters']],
+        left_on='code_omloop',
+        right_on='code_afstand',
+        how='left'
+    )
 
-    #
+    # Remove the 'code_afstand' column if it's not needed
+    df_omloop_merged.drop(columns=['code_afstand'], inplace=True)
 
-    max_batt_capa = 300 # kW
+    # Create a new column 'afstand in km' by converting 'afstand in meters' to kilometers
+    df_omloop_merged['afstand in km'] = df_omloop_merged['afstand in meters'] / 1000
+
+    energie_verbruik_per_km = energieverbruik #kWh per gereden kilometer
+    oplaadkracht_per_uur = 450 # kWh per uur tot 90%
+    oplaadkracht_per_uur_laatste = 60 # wordt niet gebruikt
+    max_batt_capa = 300 # kWh
     SOC_start = 0.9 # factor
     SOC_min = 0.1 # factor
-    #batterijslijtage = 0.85 # Afhankelijk van de leeftijd van de bus is dat zo’n 85%-95% van de maximale capaciteit 
+    batterijslijtage = batterijslijtage  # Afhankelijk van de leeftijd van de bus is dat zo’n 85%-95% van de maximale capaciteit 
     SOH =  max_batt_capa * batterijslijtage # De SOH is de maximale capaciteit van een specifieke bus
+
 
     SOC_ochtend = SOH * SOC_start # De SOC geeft aan hoeveel procent de bus nog geladen is. 100% is daarbij gelijk aan de SOH van de bus.
     SOC_minimum = SOH * SOC_min # De veiligheidsmarge van 10% heeft ook betrekking op de SOH
 
     # DataFrame maken
     data = {
-        'Parameter': ['Max Batterij Capaciteit', 'SOC Start', 'SOC Minimum', 'Batterij Slijtage', 'SOH', 'SOC Ochtend', 'SOC Minimum'],
-        'Waarde': [max_batt_capa, SOC_start, SOC_min, batterijslijtage, SOH, SOC_ochtend, SOC_minimum],
-        'Eenheid': ['kW', 'Factor', 'Factor', 'Factor', 'kW (MBC * BS)', 'kW (SOH * SOC S)', 'kW (SOH * SOC M)']
+        'Parameter': ['Max Batterij Capaciteit', 'SOC Start', 'SOC Minimum', 'Batterij Slijtage', 'SOH', 'SOC Ochtend', 'SOC Minimum','Batterijverbuik','Oplaadsnelheid'],
+        'Waarde': [max_batt_capa, SOC_start, SOC_min, batterijslijtage, SOH, SOC_ochtend, SOC_minimum, energie_verbruik_per_km,oplaadkracht_per_uur],
+        'Eenheid': ['kWh', 'Factor', 'Factor', 'Factor', 'kW (MBC * BS)', 'kW (SOH * SOC S)', 'kW (SOH * SOC M)','kWh/km','kWh/uur']
     }
 
-    df_var_bus = pd.DataFrame(data)
+    df = pd.DataFrame(data)
 
-    # Initialiseren van de kolommen voor SOC
-    df_omloopplanning['SOC_beginrit'] = 0.0
-    df_omloopplanning['SOC_eindrit'] = 0.0
+    # Verkrijg alle unieke waarden van 'code_afstand'
+    unieke_omloop = df_omloop_merged['omloop nummer'].unique()
 
-    # Berekenen van SOC_beginrit en SOC_eindrit per rit
-    huidige_omloop = None
-    huidige_SOC = SOC_ochtend
-
-    for index, row in df_omloopplanning.iterrows():
-        if row['omloop nummer'] != huidige_omloop:
-            huidige_omloop = row['omloop nummer']
-            huidige_SOC = SOC_ochtend
+    # Maak een lege dictionary om de DataFrames op te slaan
+    df_dict_omloop = {}
+    totaal = 0
+    # Loop door elke unieke code en filter df_omloop
+    for omloop in unieke_omloop:
+        # Filter df_omloop
+        gefilterde_df = df_omloop_merged[df_omloop_merged['omloop nummer'] == omloop]
         
-        # SOC_beginrit instellen
-        df_omloopplanning.at[index, 'SOC_beginrit'] = huidige_SOC
+        # Voeg het gefilterde DataFrame toe aan de dictionary
+        df_dict_omloop[omloop] = gefilterde_df
         
-        # SOC_eindrit berekenen
-        huidige_SOC -= row['gebruikt_kW']
-        df_omloopplanning.at[index, 'SOC_eindrit'] = huidige_SOC
+        # Optioneel: Print de eerste paar rijen van elk gefilterd DataFrame
+        # print(f"Code: {omloop}")
+        # display(gefilterde_df.head())
+        # print(len(gefilterde_df))
+        totaal += len(gefilterde_df)
 
-        # Controle of nodig is
-        if huidige_SOC < SOC_minimum:
-            print(f"Waarschuwing: SOC onder de minimum veiligheidsmarge voor omloop nummer {huidige_omloop} bij index {index}.")
+    resultaten = {}
 
-    # Toevoegen van nieuwe kolom die aangeeft of SOC_eindrit boven SOC_minimum is
-    df_omloopplanning['SOC_above_min'] = df_omloopplanning['SOC_eindrit'] > SOC_minimum
+    for key, df in df_dict_omloop.items():
+        omloop_energie = df[['starttijd', 'eindtijd', 'activiteit', 'omloop nummer', 'code_omloop', 'afstand in km']].copy()
+        omloop_energie['afstand in km'] = omloop_energie['afstand in km'].fillna(0)
 
-    # Fliteren als de accu onder het minimum komt
-    filtered_df = df_omloopplanning[df_omloopplanning['SOC_above_min'] == False]
+        # Reset the index to use integer indexing
+        omloop_energie.reset_index(drop=True, inplace=True)
+        
+        omloop_energie.sort_values(by=['starttijd', 'eindtijd'], inplace=True)
 
-    # Berekenen van de laagste SOC_eindrit per omloopnummer
-    min_SOC_per_omloopnummer = df_omloopplanning.groupby('omloop nummer')['SOC_eindrit'].min().reset_index()
-    min_SOC_per_omloopnummer.columns = ['omloop nummer', 'min_SOC_eindrit']
+        # Initialize 'SOC_beginrit' for the first row
+        omloop_energie.at[0, 'SOC_beginrit'] = SOC_ochtend
+        
+        for i in range(len(omloop_energie)):
+            SOC_start = omloop_energie.at[i, 'SOC_beginrit']
+            
+            if omloop_energie.at[i, 'activiteit'] == 'opladen':
+                starttijd = pd.to_datetime(omloop_energie.at[i, 'starttijd'])
+                eindtijd = pd.to_datetime(omloop_energie.at[i, 'eindtijd'])
+                duur_in_uren = (eindtijd - starttijd).total_seconds() / 3600
+                
+                opgeladen_energie = oplaadkracht_per_uur * duur_in_uren
+                SOC_eind = SOC_start + opgeladen_energie
+            else:
+                afstand = omloop_energie.at[i, 'afstand in km']
+                verbruik = energie_verbruik_per_km * afstand if pd.notna(afstand) else 0
+                SOC_eind = SOC_start - verbruik
+            
+            # Save the calculated SOC, even if it is negative
+            omloop_energie.at[i, 'SOC_eindrit'] = SOC_eind
+            
+            if i + 1 < len(omloop_energie):
+                omloop_energie.at[i + 1, 'SOC_beginrit'] = SOC_eind
+        
+        resultaten[key] = omloop_energie
 
-    return df_var_bus, filtered_df, min_SOC_per_omloopnummer, df_omloopplanning
+    omloopnummers_onder_nul = []
+
+    for key, result in resultaten.items():
+        if any(result['SOC_eindrit'] < SOC_minimum):
+            omloopnummers_onder_nul.append(key)
+
+
+    return resultaten, omloopnummers_onder_nul
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # Functie om oplaad tijd te controleren:
 
 def Check_oplaad_tijd(df_omloopplanning):
+
+    # Nieuwe kolom 'duur' toevoegen die de verschil tussen eindtijd en starttijd aangeeft
+    df_omloopplanning['duur'] = df_omloopplanning['eindtijd'] - df_omloopplanning['starttijd']
+
+    # Als je de duur in minuten wilt omzetten
+    df_omloopplanning['duur_minuten'] = df_omloopplanning['duur'].dt.total_seconds() / 60
+
     # Filter de rijen waarbij 'activiteit' gelijk is aan 'opladen'
     opladen_df = df_omloopplanning[df_omloopplanning['activiteit'] == 'opladen']
     error = 'Geen error'
-
+    
     # Controleren of er rijen met 'opladen' zijn gevonden
     if opladen_df.empty:
         error = "Geen rijen gevonden waarbij de 'activiteit' gelijk is aan 'opladen'."
@@ -188,7 +271,7 @@ def Check_oplaad_tijd(df_omloopplanning):
         
         #print("Rijen waarbij de 'activiteit' gelijk is aan 'opladen':")
         # Display de relevante kolommen inclusief de nieuwe kolom
-        opladen_df = opladen_df[['activiteit', 'energieverbruik', 'duur_minuten', 'SOC_above_min', 'lang_genoeg_opgeladen']]
+        opladen_df = opladen_df[['activiteit', 'energieverbruik', 'duur_minuten', 'lang_genoeg_opgeladen']]
 
         # Filter de rijen waarbij 'lang_genoeg_opgeladen' False is
         niet_lang_genoeg_opgeladen_df = opladen_df[opladen_df['lang_genoeg_opgeladen'] == False]
@@ -246,3 +329,45 @@ def Gantt_chart(df):
     plt.tight_layout()
     plt.savefig('Omloopplanning_Gantt.png')
     return ax
+
+
+def plot_energie(resultaten):
+    # Initialiseer een plot
+    plt.figure(figsize=(12, 7))
+
+    # Zet de formatter voor tijdweergave op de x-as
+    time_formatter = mdates.DateFormatter('%m-%d %H:%M')
+
+    # Maak een colormap aan voor visuele differentiatie
+    colors = plt.cm.viridis(np.linspace(0, 1, len(resultaten)))
+
+    # Itereer over de resultaten en plot ze
+    for (key, result), color in zip(resultaten.items(), colors):
+        # Zorg ervoor dat 'eindtijd' een datetime object is
+        result['eindtijd'] = pd.to_datetime(result['eindtijd'])
+        
+        # Datum en tijd voor verschillen over middernacht
+        x_values = result['eindtijd']
+        y_values = result['SOC_eindrit']
+        
+        plt.plot(x_values, y_values, marker='o', linestyle='-', label=f"Sleutel {key}", color=color)
+
+    # Voeg een horizontale lijn toe bij y = 0
+    plt.axhline(y=0, color='red', linestyle='-', linewidth=2)
+    # Voeg een horizontale lijn toe bij y = 0
+    #plt.axhline(y=SOC_minimum, color='orange', linestyle='-', linewidth=2)
+
+    # Pas de x-as formattering aan
+    plt.gca().xaxis.set_major_formatter(time_formatter)
+    plt.xticks(rotation=45)
+
+    # Labels en legenda toevoegen
+    plt.title("SOC_eindrit over eindtijd")
+    plt.xlabel('Eindtijd (maand-dag uur:minuut)')
+    plt.ylabel('SOC eindrit')
+    plt.legend(title='Sleutels')
+    plt.grid(True)
+    plt.tight_layout()
+
+    # Toon het plot
+    plt.savefig('plteng.png')

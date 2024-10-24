@@ -16,12 +16,12 @@ from Constraint_functions import *
 # Streamlit paginas maken
 
 st.set_page_config(
-    page_title="Bravo_app",
+    page_title="Bus_app",
     page_icon= "🏠"
     )
 
-st.title("Bravo app ")
-st.write("Welcome to the Bravo app. This app is designed to check the circulation plans and timetables of the Bravo bus company. The app checks the battery level, the correctness of the circulation plans and timetables, the charging time and the minimum and maximum values. The app also provides visualizations of the circulation plans and the energy consumption of the buses. ")
+st.title("Bus app ")
+st.write("Welcome to the Bus app. This app is designed to check the circulation plans and timetables of a bus company. The app checks the battery level, the correctness of the circulation plans and timetables, the charging time and the minimum and maximum values. The app also provides visualizations of the circulation plans and the energy consumption of the buses. ")
 st.subheader("Evaluation:")
 with st.sidebar:
     path_omloopplanning = st.file_uploader('Upload Circulation Plan: ', type='xlsx', accept_multiple_files= False)
@@ -46,8 +46,8 @@ with st.spinner("Calculation..."):
         # Functie om data in te laden
         def load_data():
             # Lees de Excel bestanden in DataFrames
-            df_omloopplanning = pd.read_excel('omloopplanning.xlsx', engine='openpyxl')
-            df_dienstregeling = pd.read_excel('Connexxion data - 2024-2025.xlsx', engine='openpyxl')
+            df_omloopplanning = pd.read_excel(path_omloopplanning, engine='openpyxl')
+            df_dienstregeling = pd.read_excel(Path_dienstregeling, engine='openpyxl')
             return df_omloopplanning, df_dienstregeling
 
         # 1.CONTROLE BATTERIJNIVEAU:
@@ -72,7 +72,7 @@ with st.spinner("Calculation..."):
                                     df_omloop['buslijn'].astype(str)
 
         # Connexxion afstandsmatrix inladen
-        df_afstandsmatrix = pd.read_excel('Connexxion data - 2024-2025.xlsx', engine='openpyxl', sheet_name='Afstandsmatrix')
+        df_afstandsmatrix = pd.read_excel(Path_dienstregeling, engine='openpyxl', sheet_name='Afstandsmatrix')
 
         # Voeg de kolommen samen en maak de nieuwe kolom 'code'
         df_afstandsmatrix['code_afstand'] = df_afstandsmatrix['startlocatie'].astype(str) + '_' + \
@@ -263,26 +263,26 @@ with st.spinner("Calculation..."):
 
         if false_count > 0:
             df_messages_omloopplanning = filtered_df[filtered_df['correct'] == False]
-            messages_omloopplanning = "Job found in Circulations plans that isn't in the TimeTable:",false_count, "⛔" # Er is een dienstrit die niet overeenkomt met de dienstregeling
+            messages_omloopplanning = "Routes found in Circulations plans that isn't in the TimeTable:",false_count, "⛔" # Er is een dienstrit die niet overeenkomt met de dienstregeling
 
-            st.write("Job found in Circulations plans that isn't in the TimeTable:",false_count, "⛔")
+            st.write("Routes found in Circulations plans that isn't in the TimeTable:",false_count, "⛔")
             st.dataframe(df_messages_omloopplanning)
         else:
-            messages_omloopplanning = "No job found in Circulations plans that isn't in the TimeTable: ✅"
+            messages_omloopplanning = "No Routes found in Circulations plans that isn't in the TimeTable: ✅"
 
 
         # Deel 2: Resultaten van dienstregeling controleren
         not_found_count = df_dienstregeling[df_dienstregeling['found_in_omloop'] == False].shape[0]
         if not_found_count > 0:
             df_messages_dienstregeling = df_dienstregeling[df_dienstregeling['found_in_omloop'] == False]
-            messages_dienstregeling = "Job found in TimeTable that is not in the Circulation Plans:", not_found_count, "⛔" # wel een gevonden in de dienstregeling maar niet in de omloopplanning
+            messages_dienstregeling = "Routes found in TimeTable that is not in the Circulation Plans:", not_found_count, "⛔" # wel een gevonden in de dienstregeling maar niet in de omloopplanning
             
-            st.write("Job found in TimeTable that is not in the Circulation Plans:", not_found_count, "⛔")
+            st.write("Routes found in TimeTable that is not in the Circulation Plans:", not_found_count, "⛔")
             st.write(df_messages_dienstregeling)
         else:
-            messages_dienstregeling = "No jobs found in TimeTable that are not in the Cirvulation Plans: ✅"
+            messages_dienstregeling = "No routes found in TimeTable that are not in the Cirvulation Plans: ✅"
 
-            st.write("No jobs found in TimeTable that are not in the Cirvulation Plans: ✅")
+            st.write("No routes found in TimeTable that are not in the Cirvulation Plans: ✅")
 
 
         # 3. OPLAADTIJD CONTROLEREN:
@@ -319,8 +319,33 @@ with st.spinner("Calculation..."):
 
 
         # 4. CONTROLE Min/Max:
+        # Samenvoegen van de DataFrames op basis van startlocatie, eindlocatie en buslijn
+        merged_df = df_omloopplanning.merge(df_afstandsmatrix, on=['startlocatie', 'eindlocatie', 'buslijn'], how='left')
 
+        # Voorwaarden controleren of de duur buiten de minimale en maximale reistijd valt
+        condition_out_of_bounds = (merged_df['duur_minuten'] < merged_df['min reistijd in min']) | (merged_df['duur_minuten'] > merged_df['max reistijd in min'])
 
+        # Nieuwe DataFrame met rijen waar de voorwaarde True is
+        df_out_of_bounds = merged_df[condition_out_of_bounds]
+        # Unieke 'code_afstand' waarden in df_out_of_bounds
+        unieke_codes_domein = df_out_of_bounds['code_afstand'].unique()
+
+        # Voorwaarden controleren of de duur onder de minimale reistijd ligt
+        condition_below_min = merged_df['duur_minuten'] < merged_df['min reistijd in min']
+
+        # Nieuwe DataFrame met rijen waar de voorwaarde True is
+        df_below_min = merged_df[condition_below_min]
+
+        # Unieke 'code_afstand' waarden in df_below_min
+        unieke_codes_min = df_below_min['code_afstand'].unique()
+
+        if len(df_out_of_bounds) > 0:
+            st.write("There are routes outside the minimum and maximum travel time: ", len(df_out_of_bounds)," ⛔")
+            st.write("Routes below the minimum travel time:", len(df_below_min))
+            st.write("Routes above the maximum travel time:", len(df_out_of_bounds)-len(df_below_min))
+            st.dataframe(df_out_of_bounds)
+        else:
+            st.write("There are no routes outside the minimum and maximum travel time: ✅")
 
 
 
@@ -330,7 +355,7 @@ with st.spinner("Calculation..."):
         st.subheader("Visualisations:")
 
         # Plot voor Gantt chart
-        df = pd.read_excel('omloopplanning.xlsx', engine='openpyxl')
+        df = pd.read_excel(path_omloopplanning, engine='openpyxl')
         # Convert starttijd and eindtijd to datetime for proper plotting
         df['starttijd datum'] = pd.to_datetime(df['starttijd datum'])
         df['eindtijd datum'] = pd.to_datetime(df['eindtijd datum'])
@@ -408,8 +433,8 @@ with st.spinner("Calculation..."):
 
         # Labels en legenda toevoegen
         ax.set_title("SOC for each Circulation Plan")
-        ax.set_xlabel('End time job (month-day hour:minute)')
-        ax.set_ylabel('SOC at the end of the job')
+        ax.set_xlabel('End time route (month-day hour:minute)')
+        ax.set_ylabel('SOC at the end of the route')
         ax.legend(title='Circualation nummer')
         ax.grid(True)
         plt.tight_layout()

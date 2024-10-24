@@ -1,11 +1,9 @@
 pandas
 plotly
 streamlit
-matplotlib.pyplot 
-matplotlib.dates 
-matplotlib.patches 
+matplotlib
 numpy
-IPython.display
+IPython
 warnings
 os
 datetime

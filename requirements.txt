@@ -1,0 +1,11 @@
+pandas
+plotly
+streamlit
+matplotlib.pyplot 
+matplotlib.dates 
+matplotlib.patches 
+numpy
+IPython.display
+warnings
+os
+datetime

@@ -5,10 +5,7 @@ import matplotlib.dates as mdates
 from matplotlib.patches import Patch
 import pandas as pd
 import numpy as np
-from IPython.display import display
-import warnings
 import streamlit as st
-import os
 from datetime import time
 
 # Functies van Constraints importeren

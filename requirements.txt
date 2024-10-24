@@ -1,9 +1,5 @@
 pandas
-plotly
 streamlit
 matplotlib
 numpy
-IPython
-warnings
-os
 datetime

@@ -8,8 +8,6 @@ import numpy as np
 import streamlit as st
 from datetime import time
 
-# Functies van Constraints importeren
-from Constraint_functions import *
 # Streamlit paginas maken
 
 st.set_page_config(

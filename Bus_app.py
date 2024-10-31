@@ -191,8 +191,7 @@ with st.spinner("Calculation..."):
             messages_batterijniveua = "Circulation Plans with SOC under", round(SOC_minimum,2), "kWh:", omloopnummers_onder_nul, "⛔"
 
             st.write("Circulation Plans with SOC under", round(SOC_minimum,2), "kWh:", " ⛔")
-            df_temp = pd.DataFrame(omloopnummers_onder_nul, columns=['omloop nummer'])
-            st.dataframe(df_temp.transpose())
+            st.write(" - ".join(map(str,omloopnummers_onder_nul)))
         
 
         # 2. CONTROLE OMLOOPPLANNING vs DIENSTREGELING:

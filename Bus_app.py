@@ -16,7 +16,7 @@ st.set_page_config(
     )
 
 st.title("Bus app ")
-st.write("Welcome to the Bus app. This app is designed to check the circulation plans and timetables of a bus company. The app checks the battery level, the correctness of the circulation plans and timetables, the charging time and the minimum and maximum values. The app also provides visualizations of the circulation plans and the energy consumption of the buses. ")
+st.write("Welcome to the Bus app. This app is designed to check the Circulation Plan and TimeTable of a bus company. The app checks the battery level, the correctness of the Circulation Plan and TimeTable, the charging time and the minimum and maximum values. The app also provides visualizations of the Circulation Plan and the energy consumption of the buses. ")
 st.subheader("Evaluation:")
 with st.sidebar:
     path_omloopplanning = st.file_uploader('Upload Circulation Plan: ', type='xlsx', accept_multiple_files= False)
@@ -184,16 +184,16 @@ with st.spinner("Calculation..."):
 
         # Bericht maken voor batterijniveau
         if len(omloopnummers_onder_nul) == 0:
-            messages_batterijniveua = "No Circulation Plans with SOC under", SOC_minimum, "kWh: ✅"
             
-            st.write("No Circulation Plans with SOC under", round(SOC_minimum,2), "kWh: ✅")
+            st.write("- No Circulation Plan with SOC (State Of Charge) under", round(SOC_minimum,2), "kWh (10""%"" of maximum SOC): ✅")
         else:
-            messages_batterijniveua = "Circulation Plans with SOC under", round(SOC_minimum,2), "kWh:", omloopnummers_onder_nul, "⛔"
-
-            st.write("Circulation Plans with SOC under", round(SOC_minimum,2), "kWh:", " ⛔")
-            df_temp = pd.DataFrame(omloopnummers_onder_nul, columns=['omloop nummer'])
-            st.dataframe(df_temp.transpose())
-        
+            st.write("- Circulation Plan with SOC (State Of Charge) under", round(SOC_minimum,2), "kWh (10""%"" of maximum SOC):", " ⛔")
+            st.write(" - ".join(map(str,omloopnummers_onder_nul)))
+            st.markdown("""
+                <p style='font-size:12px; font-style:italic;'>
+                    Circulations with their minimun below the threshold may idicate a risk with the battery capacity.
+                </p>
+            """, unsafe_allow_html=True)
 
         # 2. CONTROLE OMLOOPPLANNING vs DIENSTREGELING:
 
@@ -257,28 +257,38 @@ with st.spinner("Calculation..."):
         filtered_df = df_omloopplanning[df_omloopplanning['activiteit'] == 'dienst rit']
         false_count = filtered_df[filtered_df['correct'] == False].shape[0]
 
+        st.write("")
         if false_count > 0:
             df_messages_omloopplanning = filtered_df[filtered_df['correct'] == False]
-            messages_omloopplanning = "Routes found in Circulations plans that isn't in the TimeTable:",false_count, "⛔" # Er is een dienstrit die niet overeenkomt met de dienstregeling
-
-            st.write("Routes found in Circulations plans that isn't in the TimeTable:",false_count, "⛔")
+            messages_omloopplanning = "Routes found in Circulation plan that are not in the TimeTable:",false_count, "⛔" # Er is een dienstrit die niet overeenkomt met de dienstregeling
+            
+            st.write("- Routes found in Circulation plan that are not in the TimeTable:",false_count, "⛔")
             st.dataframe(df_messages_omloopplanning)
+            st.markdown("""
+                <p style='font-size:12px; font-style:italic;'>
+                    These routes indicate unnecessarily planned Circulations.
+                </p>
+            """, unsafe_allow_html=True)
         else:
-            messages_omloopplanning = "No Routes found in Circulations plans that isn't in the TimeTable: ✅"
-
+            st.write("- No Routes found in Circulation plan that are not in the TimeTable: ✅")
 
         # Deel 2: Resultaten van dienstregeling controleren
         not_found_count = df_dienstregeling[df_dienstregeling['found_in_omloop'] == False].shape[0]
+        st.write("")
         if not_found_count > 0:
             df_messages_dienstregeling = df_dienstregeling[df_dienstregeling['found_in_omloop'] == False]
-            messages_dienstregeling = "Routes found in TimeTable that is not in the Circulation Plans:", not_found_count, "⛔" # wel een gevonden in de dienstregeling maar niet in de omloopplanning
-            
-            st.write("Routes found in TimeTable that is not in the Circulation Plans:", not_found_count, "⛔")
-            st.write(df_messages_dienstregeling)
-        else:
-            messages_dienstregeling = "No routes found in TimeTable that are not in the Cirvulation Plans: ✅"
 
-            st.write("No routes found in TimeTable that are not in the Cirvulation Plans: ✅")
+            st.write("- Routes found in TimeTable that are not in the Circulation Plan:", not_found_count, "⛔")
+            st.write(df_messages_dienstregeling)
+            st.markdown("""
+                <p style='font-size:12px; font-style:italic;'>
+                    These routes indicate that they have not yet been assigned to a Circulation.
+                </p>
+            """, unsafe_allow_html=True)
+
+        else:
+
+            st.write("- No routes found in TimeTable that are not in the Cirvulation Plan: ✅")
 
 
         # 3. OPLAADTIJD CONTROLEREN:
@@ -302,16 +312,17 @@ with st.spinner("Calculation..."):
         # Bereken de totale oplaadtijd
         tekort_oplaadtijd = opladen_df[opladen_df['duur_minuten'] < 15]
         df_messages_oplaadtijd = pd.DataFrame()
+
+        st.write("")
         if tekort_oplaadtijd.shape[0] > 0:
             df_messages_oplaadtijd = tekort_oplaadtijd['starttijd', 'eindtijd','omloop nummer' ,'duur_minuten']
             messages_oplaadtijd = "Charging time is less than 15 minutes:", tekort_oplaadtijd.shape[0], "⛔"
 
-            st.write("Charging time is less than 15 minutes:", tekort_oplaadtijd.shape[0], "⛔")
+            st.write("- Charging time is less than the minimum of 15 minutes:", tekort_oplaadtijd.shape[0], "⛔")
             st.dataframe(df_messages_oplaadtijd)
         else:
-            messages_oplaadtijd = "Charging time is more than 15 minutes: ✅"
 
-            st.write("Charging time is more than 15 minutes: ✅")
+            st.write("- Charging time is more than the minimum of 15 minutes: ✅")
 
 
         # 4. CONTROLE Min/Max:
@@ -335,19 +346,23 @@ with st.spinner("Calculation..."):
         # Unieke 'code_afstand' waarden in df_below_min
         unieke_codes_min = df_below_min['code_afstand'].unique()
 
+        st.write("")
         if len(df_out_of_bounds) > 0:
-            st.write("There are routes outside the minimum and maximum travel time: ", len(df_out_of_bounds)," ⛔")
-            st.write("Routes below the minimum travel time:", len(df_below_min))
-            st.write("Routes above the maximum travel time:", len(df_out_of_bounds)-len(df_below_min))
+            st.write("- Number of routes that according to the data outside are outside the minimum or maximum travel time: ", len(df_out_of_bounds)," ⛔")
+            st.write("Number of routes below the minimum travel time:", len(df_below_min))
+            st.write("Number of routes above the maximum travel time:", len(df_out_of_bounds)-len(df_below_min))
+            st.write("Routes that are outside the minimum or maximum travel time:")
             st.dataframe(df_out_of_bounds)
+            
         else:
-            st.write("There are no routes outside the minimum and maximum travel time: ✅")
+            st.write("- There are no routes that according to the data outside the minimum or maximum travel time: ✅")
 
 
 
 
 
-
+        # 5. VISUALISATIES:
+        
         st.subheader("Visualisations:")
 
         # Plot voor Gantt chart
@@ -393,10 +408,11 @@ with st.spinner("Calculation..."):
         ax.set_ylabel('Circulation number')
         ax.set_title('Circulation plan Gantt Chart')
         
+        st.write("- This Gantt chart illustrates the bus circulation plan by displaying different activities over time for each circulation number. Colors indicate specific activities: black for material rides, yellow for service trip 401, blue for idle times, green for service trip 400, and orange for charging. The x-axis represents the time of day, while the y-axis lists the circulation numbers, helping to track and optimize bus operations efficiently.")
         st.pyplot(fig)
 
 
-
+        st.write("")
         # Plot voor energie verbruik
         # Initialiseer een plot
         fig, ax = plt.subplots(figsize=(12, 7))
@@ -435,6 +451,7 @@ with st.spinner("Calculation..."):
         ax.grid(True)
         plt.tight_layout()
 
+        st.write("- This line plot shows the State of Charge (SOC) for each Circulation Plan at the end of the route. The x-axis represents the end time of the route, while the y-axis shows the SOC. The red line indicates the minimum SOC threshold, while the orange line represents the safety margin. The plot helps to monitor the battery capacity and ensure that the buses are charged adequately for the next route.")
         st.pyplot(fig)
 
 

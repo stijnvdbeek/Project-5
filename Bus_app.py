@@ -162,8 +162,8 @@ with st.spinner("Calculation..."):
                     
                     opgeladen_energie = oplaadkracht_per_uur * duur_in_uren
                     SOC_eind = SOC_start + opgeladen_energie
-                    if SOC_eind > 300* SOH *0.9:
-                        SOC_eind = 300* SOH *0.9
+                    if SOC_eind > (SOC_start * SOH):
+                        SOC_eind = SOC_start * SOH
                     else:
                         SOC_eind = SOC_eind
                 else:

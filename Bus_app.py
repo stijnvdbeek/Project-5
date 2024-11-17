@@ -166,6 +166,10 @@ with st.spinner("Calculation..."):
                     afstand = omloop_energie.at[i, 'afstand in km']
                     verbruik = energie_verbruik_per_km * afstand if pd.notna(afstand) else 0
                     SOC_eind = SOC_start - verbruik
+                    if SOC_eind > 300* SOH *0.9:
+                        SOC_eind = 300* SOH *0.9
+                    else:
+                        SOC_eind = SOC_eind
                 
                 # Save the calculated SOC, even if it is negative
                 omloop_energie.at[i, 'SOC_eindrit'] = SOC_eind
